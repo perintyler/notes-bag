@@ -1,0 +1,28 @@
+#!/usr/bin/env node
+import { readFileSync, writeFileSync, mkdirSync } from 'node:fs';
+import { join, dirname } from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { build } from 'esbuild';
+
+const root = dirname(dirname(fileURLToPath(import.meta.url)));
+const dist = join(root, 'dist');
+
+mkdirSync(dist, { recursive: true });
+
+// Bundle CSS as a JS string export
+const css = readFileSync(join(root, 'src', 'styles.css'), 'utf8');
+writeFileSync(join(dist, 'css.js'), `export default ${JSON.stringify(css)};\n`);
+
+// Bundle browser JS (self-contained IIFE)
+await build({
+  entryPoints: [join(root, 'src', 'index.js')],
+  bundle: true,
+  format: 'iife',
+  globalName: 'BarryNotes',
+  outfile: join(dist, 'browser.js'),
+  minify: true,
+});
+
+// Export browser JS as a string for inline embedding
+const browserJS = readFileSync(join(dist, 'browser.js'), 'utf8');
+writeFileSync(join(dist, 'browser-inline.js'), `export default ${JSON.stringify(browserJS)};\n`);

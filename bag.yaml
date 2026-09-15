@@ -1,0 +1,36 @@
+name: notes
+description: Persistent scratchpad — a Cloudflare Worker, a Durable Object per namespace, and a browser UI
+
+# Moved here from the barry monorepo's sdks/notes. The package is the whole
+# bag: the worker, the Durable Object, and the browser component that talks to
+# them. Nothing in the monorepo depends on it, which is why the move was a
+# straight relocation rather than the SDK/deployment split that bags/artifacts
+# uses.
+#
+# No `tools:` entry. This bag ships no MCP tools yet — it is a deployable
+# worker and a UI component. A session cannot read or write the scratchpad
+# until tools are added, and adding them is a deliberate next step rather than
+# something the move should have invented.
+#
+# No `traits:` block either: the auto-trait `notes` already grants readwrite
+# over the bag's namespaces, and redeclaring the name here would replace it
+# rather than refine it.
+
+deployments:
+  worker:
+    description: Scratchpad backend — Durable Object per namespace (worker barry-notes)
+    provider: cloudflare
+    worker: barry-notes
+    config: wrangler.jsonc
+    # UNVERIFIED. wrangler.jsonc declares no routes and no custom domain, so
+    # this deploys to a workers.dev subdomain whose account prefix this file
+    # cannot know. `url` is required by the manifest schema, so the value below
+    # is a placeholder shape, NOT a confirmed endpoint — nothing reads it yet.
+    # Replace it with the real URL that `wrangler deploy` prints the first time
+    # this is deployed. The `worker:` name above is the field that matters: it
+    # is cross-checked against wrangler.jsonc at deploy time.
+    url: https://barry-notes.workers.dev
+    health: /health
+    build:
+      command: pnpm
+      args: ["build"]
