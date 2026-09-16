@@ -40,10 +40,16 @@ no custom domain, so its real address is an account-specific `workers.dev`
 subdomain assigned at deploy time. Replace the placeholder with what
 `wrangler deploy` prints.
 
-**There are no tests.** This moved out of the monorepo without any, and the
-known defects below are all untested. A regression test here should be broken
-first to confirm it goes red — an assertion that has never failed is a claim,
-not evidence.
+**The tests pin the defects below rather than hiding them.** Each known-bad
+behavior has a test asserting what the code actually does, marked as a defect
+in a comment. Fixing one turns its test red on purpose — that red is the signal
+to update the test and delete the entry here, not a regression. Confirmed by
+fixing the `content` validation locally and watching exactly those two tests
+go red.
+
+Run them with `pnpm test`. They stub `cloudflare:workers` and fake SqlStorage,
+so they cover routing, validation and response shapes but never real SQL or DO
+persistence. The browser component is untested.
 
 Known defects, none fixed by the move:
 
