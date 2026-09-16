@@ -7,7 +7,9 @@ namespace, and a browser component that autosaves into it.
 import { NotesApp } from "@barry-bags/notes";
 
 new NotesApp(document.getElementById("root"), {
-  workerUrl: "https://barry-notes.<account>.workers.dev",
+  // A path on your own origin, not the worker's address. The worker has no
+  // auth of its own, so the page in front of it should proxy — see below.
+  workerUrl: "/api/notes",
   namespace: "my-scratchpad",
 });
 ```
@@ -18,16 +20,22 @@ database and exactly one note in it.
 
 ## Worth knowing before changing anything here
 
-**The worker has no authentication.** The `X-Notes-Namespace` header is the
-only thing separating one scratchpad from another, and it is supplied by the
-caller. Anyone who knows or guesses a namespace string can read and overwrite
-it with `curl`; `PUT` is as open as `GET`. CORS reflects the caller's origin
-(`Origin || '*'`), so any web page can drive it from a browser too.
+**The worker authenticates nothing — it relies on having no public
+hostname.** The `X-Notes-Namespace` header is the only thing separating one
+scratchpad from another, and the caller supplies it. Anyone who can reach the
+worker and guesses a namespace can read and overwrite it; `PUT` is as open as
+`GET`, and CORS reflects the caller's origin (`Origin || '*'`), so any web page
+could drive it from a browser.
 
-That is survivable only because nothing currently points at this worker. Before
-putting a real UI or a real domain in front of it, put a gateway in front of it
-too — `bags/artifacts` in the barry monorepo does exactly this, which is why it
-has a second `deployments:` entry holding a Google-OAuth worker.
+That is survivable only because `wrangler.jsonc` sets `workers_dev: false`, so
+there is no public URL. It answered on `workers.dev` until that landed, which
+made an unwritten scratchpad readable and writable by anyone who found the
+hostname.
+
+Nothing consumes this worker yet. When something does, reach it through a
+service binding from an authenticated worker rather than turning `workers_dev`
+back on — barry.rocks does this for the sibling `links` bag, proxying through
+its own session-checked route so the browser never learns a worker address.
 
 **Renaming the worker orphans the data.** Durable Object storage is keyed to
 the worker and class name, so changing `barry-notes` or `NotesObject` does not

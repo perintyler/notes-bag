@@ -22,13 +22,12 @@ deployments:
     provider: cloudflare
     worker: barry-notes
     config: wrangler.jsonc
-    # UNVERIFIED. wrangler.jsonc declares no routes and no custom domain, so
-    # this deploys to a workers.dev subdomain whose account prefix this file
-    # cannot know. `url` is required by the manifest schema, so the value below
-    # is a placeholder shape, NOT a confirmed endpoint — nothing reads it yet.
-    # Replace it with the real URL that `wrangler deploy` prints the first time
-    # this is deployed. The `worker:` name above is the field that matters: it
-    # is cross-checked against wrangler.jsonc at deploy time.
+    # NOT AN ENDPOINT. This worker has no public hostname — wrangler.jsonc sets
+    # `workers_dev: false` and declares no routes — so there is no URL to put
+    # here. A future consumer should reach it through a service binding rather
+    # than re-enabling workers_dev. The manifest schema requires `url`, so this
+    # is a placeholder that satisfies the type and means nothing; `worker:`
+    # above is the field that identifies the deployment.
     url: https://barry-notes.workers.dev
     health: /health
     build:
