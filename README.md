@@ -48,29 +48,32 @@ no custom domain, so its real address is an account-specific `workers.dev`
 subdomain assigned at deploy time. Replace the placeholder with what
 `wrangler deploy` prints.
 
-**The tests pin the defects below rather than hiding them.** Each known-bad
-behavior has a test asserting what the code actually does, marked as a defect
-in a comment. Fixing one turns its test red on purpose — that red is the signal
-to update the test and delete the entry here, not a regression. Confirmed by
-fixing the `content` validation locally and watching exactly those two tests
-go red.
-
-Run them with `pnpm test`. They stub `cloudflare:workers` and fake SqlStorage,
-so they cover routing, validation and response shapes but never real SQL or DO
+**The tests cover the fixes below, and each was verified by breaking it.** Run
+them with `pnpm test`. They stub `cloudflare:workers` and fake SqlStorage, so
+they cover routing, validation and response shapes but never real SQL or DO
 persistence. The browser component is untested.
 
-Known defects, none fixed by the move:
+Fixed here, after the move:
 
-- `saveNote` binds `content` unvalidated: `PUT {}` puts `undefined` into a
-  `NOT NULL` column, and `{"content": 123}` is stored as-is.
-- `request.json()` is unguarded, so a malformed body is a 500 rather than a 400.
-- `_save()` drops concurrent saves (`if (this._saving) return`) without
-  rescheduling, so a keystroke during an in-flight PUT can be lost.
-- `Note.updated_at` is typed `string`, but `getNote()` returns `null` for a
-  scratchpad that has never been written.
+- `PUT` requires `content` to be a string. It used to be destructured and bound
+  straight into the statement, so `PUT {}` put `undefined` into a `NOT NULL`
+  column and `PUT {"content":123}` stored a number. An empty string is still
+  accepted — that is a cleared scratchpad, not a missing field.
+- A malformed JSON body is a 400, not an unhandled throw.
+- `Note.updated_at` is typed `string | null`, which is what the read path
+  actually returns. It claimed `string`, denying the one case a consumer hits
+  first: a scratchpad nobody has written yet.
+
+Still true, and worth knowing:
+
 - `/health` returns before the CORS block, so a cross-origin health check fails
-  in a browser.
-- The `beforeunload` save uses synchronous XHR, which modern Chrome blocks.
+  in a browser. Harmless while nothing calls it cross-origin.
+- The `beforeunload` save uses synchronous XHR, which modern Chrome blocks. The
+  debounced save and the blur save both work; this is the last-resort path.
+- `_save()` drops a concurrent save (`if (this._saving) return`) without
+  rescheduling, so a keystroke landing during an in-flight PUT can be lost.
+  Fixing it properly means a dirty flag and a re-run after the in-flight save
+  resolves, which is a behavior change to the component rather than the worker.
 
 ## Layout
 

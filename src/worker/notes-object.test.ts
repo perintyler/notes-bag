@@ -66,12 +66,11 @@ describe('reading a note', () => {
   });
 
   /**
-   * DEFECT (README: "Note.updated_at is typed string but getNote returns
-   * null"). The empty case above is the one the type denies exists, so a
-   * consumer written against the type will happily do updated_at.slice() and
-   * throw on a scratchpad nobody has written yet.
+   * The Note type now says `updated_at: string | null`, which is what this
+   * path actually returns. It used to claim `string`, denying the one case a
+   * consumer hits first — an unwritten scratchpad.
    */
-  it('returns a null updated_at the Note type says is impossible — a known defect', async () => {
+  it('returns a null updated_at, which the Note type now admits', async () => {
     const { obj } = makeObject([]);
     const body = (await (await obj.fetch(req('/note'))).json()) as { updated_at: string | null };
     expect(body.updated_at).toBeNull();
@@ -102,34 +101,39 @@ describe('writing a note', () => {
   });
 
   /**
-   * DEFECT (README: "saveNote binds content unvalidated"). `content` is read
-   * straight off the parsed body with no check, so PUT {} binds undefined into
-   * a NOT NULL column and PUT {"content":123} stores a number. Neither is
-   * rejected; both reach SQLite and fail (or succeed) there instead of here.
+   * `content` used to be destructured and bound straight into the statement,
+   * so PUT {} put undefined into a NOT NULL column and PUT {"content":123}
+   * stored a number. The column's type is the contract.
    */
-  it('binds a missing content as undefined instead of rejecting — a known defect', async () => {
+  it('400s a missing content rather than binding undefined', async () => {
     const { obj, calls } = makeObject();
     const res = await obj.fetch(req('/note', { method: 'PUT', body: '{}' }));
-    expect(res.status).toBe(200);
-    const insert = calls.find((c) => c.query.includes('INSERT'));
-    expect(insert?.bindings).toContain(undefined);
+    expect(res.status).toBe(400);
+    expect(calls.some((c) => c.query.includes('INSERT'))).toBe(false);
   });
 
-  it('binds a non-string content unchanged — a known defect', async () => {
+  it('400s a non-string content', async () => {
+    for (const content of [123, true, null, { a: 1 }, ['x']]) {
+      const { obj, calls } = makeObject();
+      const res = await obj.fetch(
+        req('/note', { method: 'PUT', body: JSON.stringify({ content }) }),
+      );
+      expect(res.status, JSON.stringify(content)).toBe(400);
+      expect(calls.some((c) => c.query.includes('INSERT'))).toBe(false);
+    }
+  });
+
+  it('accepts an empty string, which is a legitimate cleared scratchpad', async () => {
     const { obj, calls } = makeObject();
-    await obj.fetch(req('/note', { method: 'PUT', body: JSON.stringify({ content: 123 }) }));
-    const insert = calls.find((c) => c.query.includes('INSERT'));
-    expect(insert?.bindings).toContain(123);
+    const res = await obj.fetch(req('/note', { method: 'PUT', body: JSON.stringify({ content: '' }) }));
+    expect(res.status).toBe(200);
+    expect(calls.some((c) => c.query.includes('INSERT'))).toBe(true);
   });
 
-  /**
-   * DEFECT (README: "request.json() is unguarded"). A malformed body rejects
-   * inside the handler and escapes as a throw rather than a 400.
-   */
-  it('throws on malformed JSON instead of returning 400 — a known defect', async () => {
+  it('400s a malformed JSON body instead of throwing', async () => {
     const { obj } = makeObject();
-    await expect(
-      obj.fetch(req('/note', { method: 'PUT', body: '{not json' })),
-    ).rejects.toThrow();
+    const res = await obj.fetch(req('/note', { method: 'PUT', body: '{not json' }));
+    expect(res.status).toBe(400);
+    expect(await res.json()).toMatchObject({ error: 'Invalid JSON body' });
   });
 });

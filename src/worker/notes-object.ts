@@ -48,8 +48,28 @@ export class NotesObject extends DurableObject<Env> {
   }
 
   private async saveNote(request: Request): Promise<Response> {
-    const body: { content?: string } = await request.json();
+    let body: { content?: unknown };
+    try {
+      body = await request.json();
+    } catch {
+      return new Response(JSON.stringify({ ok: false, error: 'Invalid JSON body' }), {
+        status: 400,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    }
+
+    // `content` was destructured and bound straight into the statement, so a
+    // PUT with no content bound undefined into a NOT NULL column and a number
+    // was stored as a number. The column's type is the contract; enforce it
+    // here rather than letting SQLite decide.
     const { content } = body;
+    if (typeof content !== 'string') {
+      return new Response(
+        JSON.stringify({ ok: false, error: 'content must be a string' }),
+        { status: 400, headers: { 'Content-Type': 'application/json' } },
+      );
+    }
+
     const now = new Date().toISOString();
     this.sql.exec(
       `INSERT INTO notes (id, content, updated_at) VALUES ('default', ?, ?)
