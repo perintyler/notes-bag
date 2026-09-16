@@ -5,6 +5,16 @@
   "main": "src/worker/index.ts",
   "compatibility_date": "2026-03-01",
 
+  // No public workers.dev URL. This worker authenticates nothing — the
+  // X-Notes-Namespace header is supplied by the caller — so while it answered
+  // on workers.dev, anyone who guessed a namespace could read and overwrite
+  // that scratchpad, and PUT was as open as GET.
+  //
+  // Nothing consumes this worker yet. When something does, reach it through a
+  // service binding from an authenticated worker (barry.rocks does exactly
+  // that for the links bag) rather than turning this back on.
+  "workers_dev": false,
+
   "durable_objects": {
     "bindings": [
       {
