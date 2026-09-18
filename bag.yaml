@@ -1,5 +1,7 @@
 name: notes
-description: Persistent scratchpad — a Cloudflare Worker, a Durable Object per namespace, and a browser UI
+description: >-
+  Notes — a local SQLite store with a service, a web app, an iOS app and MCP
+  tools, plus a separate Cloudflare scratchpad worker
 
 # Moved here from the barry monorepo's sdks/notes. The package is the whole
 # bag: the worker, the Durable Object, and the browser component that talks to
@@ -7,14 +9,63 @@ description: Persistent scratchpad — a Cloudflare Worker, a Durable Object per
 # straight relocation rather than the SDK/deployment split that bags/artifacts
 # uses.
 #
-# No `tools:` entry. This bag ships no MCP tools yet — it is a deployable
-# worker and a UI component. A session cannot read or write the scratchpad
-# until tools are added, and adding them is a deliberate next step rather than
-# something the move should have invented.
+# TWO STORES, AND THEY DO NOT SYNC.
 #
-# No `traits:` block either: the auto-trait `notes` already grants readwrite
-# over the bag's namespaces, and redeclaring the name here would replace it
-# rather than refine it.
+# `services.api` below owns a local SQLite store on this Mac: many notes, each
+# with a title and body. That is what the tools, the web app and the iOS app
+# read and write.
+#
+# `deployments.worker` is the original Cloudflare scratchpad: ONE note per
+# namespace, no auth, no public hostname. It is untouched and still deployable.
+#
+# Nothing reconciles the two. A note written on the phone does not appear in
+# the worker's scratchpad and vice versa. This is stated here rather than left
+# for a reader to discover, because the shared name invites the assumption that
+# they are one store.
+#
+# No `traits:` block: the auto-trait `notes` already grants readwrite over the
+# bag's namespaces, and redeclaring the name here would replace it rather than
+# refine it.
+
+tools:
+  entry: tools.ts
+
+services:
+  api:
+    description: Notes store — the one write path for the web app, the phone and the tools
+    command: pnpm
+    args: ["exec", "tsx", "server/src/index.ts"]
+    working-directory: .
+    port: 3870
+    health: /health
+    # Reachable from a phone. The listener stays bound to loopback; Caddy
+    # terminates on the tailnet and proxies here. A raw service port is NOT
+    # reachable from a phone — bags/point-guard-ios points at one and its
+    # device path has never worked.
+    #
+    # No `tunnel:` block. Notes are the most personal thing in this bag and
+    # nothing here needs to be reachable off the tailnet; adding a public
+    # hostname would put a read/write store behind nothing but a Cloudflare
+    # Access policy. The tailnet is the boundary.
+    host: notes.barry.lan
+    run-at-load: true
+    keep-alive: true
+    env:
+      # The service is the only writer the app and the web page can reach, so
+      # it must come up with the same secret they send. Listed here means
+      # REQUIRED: a doctor run flags it if a barry has not bound it.
+      - BARRY_SECRET
+
+apps:
+  NotesiOS:
+    description: Read and write notes from a phone
+    platform: ios
+    project: notes-ios
+    scheme: Notes
+    bundle-id: rocks.barry.notes.app
+    # No paid-only entitlements (no app groups, push, or keychain sharing), so
+    # a free personal team can sign this for a device.
+    device: true
 
 deployments:
   worker:

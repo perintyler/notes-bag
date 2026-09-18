@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "private": true,
   "type": "module",
-  "description": "Persistent scratchpad \u2014 Cloudflare Worker + Durable Object + browser UI",
+  "description": "Notes — a local SQLite store with a service, web app, iOS app and MCP tools, plus a Cloudflare scratchpad worker",
   "main": "./src/index.js",
   "exports": {
     ".": "./src/index.js",
@@ -14,17 +14,29 @@
     "./worker": "./src/worker/index.ts"
   },
   "scripts": {
+    "start": "tsx server/src/index.ts",
+    "serve": "tsx --watch server/src/index.ts",
+    "start:prod": "node --import tsx server/src/index.ts",
     "build": "node scripts/build.js",
     "dev": "wrangler dev",
     "deploy": "wrangler deploy",
-    "typecheck": "tsc --noEmit",
+    "typecheck": "tsc --noEmit && tsc --noEmit -p tsconfig.server.json",
     "test": "vitest run"
   },
   "devDependencies": {
     "@cloudflare/workers-types": "5.20260819.1",
+    "@types/better-sqlite3": "7.6.13",
+    "@types/node": "22.15.0",
     "esbuild": "0.27.0",
+    "tsx": "4.19.0",
     "typescript": "5.9.3",
-    "wrangler": "4.113.0",
-    "vitest": "4.1.0"
+    "vitest": "4.1.0",
+    "wrangler": "4.113.0"
+  },
+  "dependencies": {
+    "@barry-rocks/bags": "link:../../barry/packages/bags",
+    "@barry-rocks/tools": "link:../../barry/packages/tools",
+    "better-sqlite3": "12.10.0",
+    "zod": "3.25.76"
   }
 }

@@ -1,0 +1,22 @@
+{
+  // The worker and the local service need DIFFERENT global type sets, and
+  // `types` is all-or-nothing per program: the root tsconfig pins
+  // @cloudflare/workers-types (which the Durable Object needs and which
+  // replaces Node's globals), so the service cannot typecheck under it —
+  // `process`, `Buffer` and node: imports all vanish.
+  //
+  // Two programs, one per runtime, rather than one config that is wrong for
+  // both. `pnpm typecheck` runs them both.
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "strict": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "noEmit": true,
+    "lib": ["ES2022"],
+    "types": ["node"]
+  },
+  "include": ["server/**/*.ts", "src/db.ts", "src/store.ts", "src/client.ts", "src/tools.ts", "tools.ts"]
+}

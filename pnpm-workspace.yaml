@@ -1,7 +1,10 @@
-# esbuild bundles dist/; workerd is wrangler's runtime and sharp arrives with
-# it. Without these, pnpm skips their postinstall and `barry install` fails the
-# bag rather than registering one with missing dependencies.
+packages: []
+
 allowBuilds:
+  # vitest's bundler, and the worker runtime for wrangler.
   esbuild: true
   workerd: true
   sharp: true
+  # Compiles the native SQLite binding for the local service. Skipping it
+  # leaves a package that imports cleanly and throws at first query.
+  better-sqlite3: true

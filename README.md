@@ -1,7 +1,60 @@
 # notes
 
-A persistent scratchpad: one Cloudflare Worker, one Durable Object per
-namespace, and a browser component that autosaves into it.
+Two stores under one name. **They do not sync.**
+
+| | What | Where |
+|---|---|---|
+| **Local notes** | Many notes, each with a title and body. What the MCP tools, the web app and the iOS app read and write. | SQLite on this Mac, `~/.barry/notes.db`, served by `server/` on :3870 |
+| **Scratchpad worker** | ONE note per namespace, no auth, no public hostname. | A Cloudflare Durable Object, `src/worker/` |
+
+Nothing reconciles them: a note written on the phone does not appear in the
+worker's scratchpad and vice versa. That is stated up front because the shared
+name invites the assumption that they are one store. Syncing them is separate
+work nobody has done.
+
+## The local store
+
+```sh
+pnpm install
+pnpm start          # http://127.0.0.1:3870
+pnpm test           # store, service, and the worker's own tests
+pnpm typecheck      # two programs: the worker's and the service's
+```
+
+`BARRY_NOTES_DB` overrides the database path. The service reads `BARRY_SECRET`:
+with one bound it requires `Authorization: Bearer <secret>` (or
+`x-barry-secret`) on every `/api/` route; `/health` never takes auth, so a probe
+can tell "server down" from "wrong secret".
+
+`tsconfig.json` and `tsconfig.server.json` exist because the worker and the
+service need different global type sets — `types` is all-or-nothing per
+program, and the worker pins `@cloudflare/workers-types`, which replaces Node's
+globals.
+
+### API
+
+`GET /health` · `GET /api/notes` (index: previews, no bodies) ·
+`POST /api/notes` · `GET|PATCH|DELETE /api/notes/:id`
+
+On `PATCH`, an **omitted** field is left alone and an **empty string** clears
+it. Collapsing those two would make it impossible to edit a title without
+resending the whole body, and every autosave would race the other field.
+
+### The iOS app
+
+```sh
+cd notes-ios && ./scripts/test.sh
+barry ios build notes --simulator "iPhone 16 Pro"
+barry ios build notes --device
+```
+
+Simulator talks to `127.0.0.1:3870` with no secret. A device goes over
+Tailscale to Caddy, which selects the `notes.barry.lan` vhost from the `Host`
+header — a raw service port is not reachable from a phone. There is
+deliberately **no** `notes.barry.rocks`: notes are the most personal thing here
+and the tailnet is the boundary.
+
+## The scratchpad worker
 
 ```js
 import { NotesApp } from "@barry-bags/notes";

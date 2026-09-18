@@ -9,6 +9,7 @@ export class NotesApp {
     this._userHeaders = headers;
     this._saveTimer = null;
     this._saving = false;
+    this._dirty = false;
     this._lastSaved = null;
 
     this.el = document.createElement('div');
@@ -99,7 +100,15 @@ export class NotesApp {
   }
 
   async _save() {
-    if (this._saving) return;
+    // A save landing while another is in flight must not be DROPPED. This
+    // used to `return` here, which silently lost every keystroke typed during
+    // a PUT — the note looked saved (the status said so) and the edit was
+    // gone on next load. Mark it dirty instead and re-run on completion, with
+    // the editor's CURRENT value.
+    if (this._saving) {
+      this._dirty = true;
+      return;
+    }
     this._saving = true;
     this._statusEl.textContent = 'Saving…';
     this._statusEl.className = 'notes-app-status';
@@ -124,6 +133,10 @@ export class NotesApp {
       this._statusEl.className = 'notes-app-status notes-app-status--error';
     } finally {
       this._saving = false;
+      if (this._dirty) {
+        this._dirty = false;
+        await this._save();
+      }
     }
   }
 
