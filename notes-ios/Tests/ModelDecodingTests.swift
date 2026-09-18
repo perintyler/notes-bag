@@ -54,24 +54,36 @@ final class ModelDecodingTests: XCTestCase {
 }
 
 final class ServerConfigTests: XCTestCase {
-    /// The Host header is what makes the device path work: Caddy selects the
-    /// vhost from it. Without one the request reaches Caddy's default site.
-    func testAppliesHostHeaderAndBearerSecret() throws {
+    /// The device path carries the secret and NOTHING else. The Host header
+    /// this used to send selected a Caddy vhost; the tailnet endpoint proxies
+    /// to this service alone, so sending one now would only be a way to
+    /// misroute a request.
+    func testAppliesBearerSecretAndNoHostHeader() throws {
         let config = ServerConfig(
-            baseURL: "http://100.97.236.110",
-            hostHeader: "notes.barry.lan",
+            baseURL: ServerConfig.defaultDeviceURL,
             secret: "s3cr3t"
         )
         let req = try XCTUnwrap(config.request(path: "/api/notes"))
 
-        XCTAssertEqual(req.value(forHTTPHeaderField: "Host"), "notes.barry.lan")
         XCTAssertEqual(req.value(forHTTPHeaderField: "authorization"), "Bearer s3cr3t")
+        XCTAssertNil(req.value(forHTTPHeaderField: "Host"),
+                     "the vhost-selecting Host header is gone and must not come back")
+        XCTAssertEqual(req.url?.absoluteString,
+                       "https://barry-mac.tail5cb2f2.ts.net:8449/api/notes")
     }
 
-    /// On the simulator there is no secret. Sending an empty bearer is worse
-    /// than sending none: the service compares it to BARRY_SECRET and 401s.
+    /// The device default must be HTTPS at the tailnet name. A plain-http
+    /// default would now be blocked by ATS rather than silently downgraded,
+    /// and a hardcoded IP is the exact thing that went stale before.
+    func testDeviceDefaultIsHTTPSAtAStableName() {
+        XCTAssertTrue(ServerConfig.defaultDeviceURL.hasPrefix("https://"),
+                      "ATS permits only loopback cleartext; the device path must be TLS")
+        XCTAssertTrue(ServerConfig.defaultDeviceURL.contains("ts.net"),
+                      "the device host must be the stable tailnet name, not an address")
+    }
+
     func testOmitsEmptyHeaders() throws {
-        let config = ServerConfig(baseURL: "http://127.0.0.1:3870", hostHeader: "", secret: "")
+        let config = ServerConfig(baseURL: ServerConfig.simulatorURL, secret: "")
         let req = try XCTUnwrap(config.request(path: "/health"))
 
         XCTAssertNil(req.value(forHTTPHeaderField: "Host"))
@@ -82,7 +94,7 @@ final class ServerConfigTests: XCTestCase {
     /// later: URLComponents accepts most of these as RELATIVE paths.
     func testRejectsAMalformedBaseURL() {
         for bad in ["not a url", "", "notes.barry.lan", "/api", "ftp://host"] {
-            let config = ServerConfig(baseURL: bad, hostHeader: "", secret: "")
+            let config = ServerConfig(baseURL: bad, secret: "")
             XCTAssertNil(config.request(path: "/api/notes"), "should reject \(bad)")
         }
     }

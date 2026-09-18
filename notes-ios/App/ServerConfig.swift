@@ -2,49 +2,41 @@ import Foundation
 
 /// Where the app talks to the notes service, and how it authenticates.
 ///
-/// The reachability recipe is the one `bags/barry-iphone` established and
-/// `bags/questions/questions-ios` refined, reused rather than rediscovered:
-///  - Simulator: straight to the service's loopback port.
-///  - Device: over Tailscale to the Mac, with a Host header so Caddy routes to
-///    the `notes.barry.lan` vhost the bag declares.
+///  - Simulator: straight to the service's loopback port, `127.0.0.1:3870`.
+///  - Device: HTTPS over the personal tailnet to a userspace `tailscaled`
+///    sidecar, which terminates TLS and proxies to that same loopback port.
 ///
-/// Every Barry service binds 127.0.0.1 ONLY. There is no route to a raw
-/// service port from a phone — the tailnet address reaches Caddy on :80, and
-/// the `Host` header selects the site block. `bags/point-guard-ios` points at
-/// `100.x.x.x:3868` and its device path has never worked for exactly this
-/// reason; do not copy that shape.
-///
-/// `defaultTailscaleHost` is a STARTING POINT, not a constant. A tailnet
-/// address changes (this Mac moved from 100.101.38.91 to 100.97.236.110 in a
-/// single day, and `bags/plans/plans-iphone` still ships the stale one). It is
-/// overridable in Settings and persisted, so a moved Mac is a text-field edit
-/// rather than a rebuild. Find the current value with `tailscale ip -4`.
+/// The device host is a real tailnet DNS name with a real Let's Encrypt
+/// certificate, so there is no certificate prompt and no pinning to do. It
+/// replaces a hardcoded Tailscale IP plus a `Host: notes.barry.lan` header
+/// selecting a Caddy site block. The IP was the part that kept breaking — it
+/// was documented here as a value to re-check with `tailscale ip -4`, and it
+/// went stale anyway when the node it named went offline. A stable name removes
+/// the maintenance rather than rescheduling it. The sidecar endpoint proxies to
+/// this service alone, so there is no vhost left to select.
 struct ServerConfig: Equatable {
     var baseURL: String
-    var hostHeader: String
     var secret: String
 
     static let defaultsKeyBase = "server.baseURL"
-    static let defaultsKeyHost = "server.hostHeader"
 
     /// This app's OWN keychain item, never shared with the other Barry apps.
     /// Two apps sharing one item would mean signing out of either silently
     /// signs out the other, and the secret is cheap to enter twice.
     static let keychainSecretKey = "rocks.barry.notes.secret"
 
-    static let defaultTailscaleHost = "100.97.236.110"
-    static let defaultHostHeader = "notes.barry.lan"
-    static let defaultPort = 3870
+    static let defaultDeviceURL = "https://barry-mac.tail5cb2f2.ts.net:8449"
+    static let simulatorURL = "http://127.0.0.1:3870"
+
+    /// The one route the service answers without a secret. The probe uses it
+    /// to tell "the service is not there" apart from "the secret is wrong".
+    static let healthPath = "/health"
 
     static var platformDefault: ServerConfig {
         #if targetEnvironment(simulator)
-        ServerConfig(baseURL: "http://127.0.0.1:\(defaultPort)", hostHeader: "", secret: "")
+        ServerConfig(baseURL: simulatorURL, secret: "")
         #else
-        ServerConfig(
-            baseURL: "http://\(defaultTailscaleHost)",
-            hostHeader: defaultHostHeader,
-            secret: ""
-        )
+        ServerConfig(baseURL: defaultDeviceURL, secret: "")
         #endif
     }
 
@@ -59,21 +51,18 @@ struct ServerConfig: Equatable {
             if let s = args.firstIndex(of: "-notesSecret"), args.count > s + 1 {
                 secret = args[s + 1]
             }
-            return ServerConfig(baseURL: args[i + 1], hostHeader: "", secret: secret)
+            return ServerConfig(baseURL: args[i + 1], secret: secret)
         }
 
         let d = UserDefaults.standard
         var c = platformDefault
         if let base = d.string(forKey: defaultsKeyBase), !base.isEmpty { c.baseURL = base }
-        if let host = d.string(forKey: defaultsKeyHost) { c.hostHeader = host }
         c.secret = Keychain.read(key: keychainSecretKey) ?? ""
         return c
     }
 
     func save() {
-        let d = UserDefaults.standard
-        d.set(baseURL, forKey: Self.defaultsKeyBase)
-        d.set(hostHeader, forKey: Self.defaultsKeyHost)
+        UserDefaults.standard.set(baseURL, forKey: Self.defaultsKeyBase)
         if secret.isEmpty {
             Keychain.delete(key: Self.keychainSecretKey)
         } else {
@@ -105,7 +94,6 @@ struct ServerConfig: Equatable {
     /// `x-barry-secret: <secret>`. Bearer is used here, the more standard
     /// spelling for a bearer token.
     func apply(to req: inout URLRequest) {
-        if !hostHeader.isEmpty { req.setValue(hostHeader, forHTTPHeaderField: "Host") }
         if !secret.isEmpty { req.setValue("Bearer \(secret)", forHTTPHeaderField: "authorization") }
     }
 }

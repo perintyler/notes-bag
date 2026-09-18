@@ -125,14 +125,6 @@ final class AppStore: ObservableObject {
 
     private var pending: (id: String, title: String, content: String)?
 
-    func testConnection() async -> String {
-        do {
-            return try await client.health() ? "Connected." : "Server answered, but not OK."
-        } catch {
-            return describe(error)
-        }
-    }
-
     /// Name the likely cause. "The operation couldn't be completed" tells the
     /// reader nothing about which of the two hosts is wrong.
     private func describe(_ error: Error) -> String {

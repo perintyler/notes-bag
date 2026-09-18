@@ -5,33 +5,32 @@ struct SettingsView: View {
     @Environment(\.dismiss) private var dismiss
 
     @State private var baseURL = ""
-    @State private var hostHeader = ""
     @State private var secret = ""
-    @State private var testResult = ""
+    @State private var outcome: ProbeOutcome?
     @State private var testing = false
 
     var body: some View {
         NavigationStack {
             Form {
                 Section {
-                    TextField("Base URL", text: $baseURL)
+                    TextField(ServerConfig.defaultDeviceURL, text: $baseURL)
                         .textInputAutocapitalization(.never)
                         .autocorrectionDisabled()
                         .keyboardType(.URL)
-                    TextField("Host header", text: $hostHeader)
-                        .textInputAutocapitalization(.never)
-                        .autocorrectionDisabled()
+                        .accessibilityIdentifier("serverURLField")
                 } header: {
                     Text("Server")
                 } footer: {
-                    // The tailnet address moves; say so, and say where to look.
-                    Text("On a device this is the Mac's Tailscale address, with the host header selecting the Caddy vhost. Find the current address with `tailscale ip -4`.")
+                    Text("On a phone the app reaches the Mac over the tailnet at a "
+                         + "stable DNS name, which serves a real certificate and "
+                         + "proxies straight to the service. Nothing to keep current.")
                 }
 
                 Section {
                     SecureField("BARRY_SECRET", text: $secret)
                         .textInputAutocapitalization(.never)
                         .autocorrectionDisabled()
+                        .accessibilityIdentifier("secretField")
                 } header: {
                     Text("Secret")
                 } footer: {
@@ -40,17 +39,24 @@ struct SettingsView: View {
 
                 Section {
                     Button(testing ? "Testing…" : "Test connection") {
-                        Task {
-                            testing = true
-                            save()
-                            testResult = await store.testConnection()
-                            testing = false
-                        }
+                        Task { await probe() }
                     }
                     .disabled(testing)
-                    if !testResult.isEmpty {
-                        Text(testResult).foregroundStyle(.secondary)
+                    .accessibilityIdentifier("testConnectionButton")
+
+                    if let outcome {
+                        Label {
+                            Text(outcome.message)
+                        } icon: {
+                            Image(systemName: icon(for: outcome))
+                        }
+                        .foregroundStyle(tint(for: outcome))
+                        .font(.footnote)
+                        .accessibilityIdentifier("probeResult")
                     }
+                } footer: {
+                    Text("Makes a real request. It tells apart a server that is not "
+                         + "reachable from one that is reachable but refused the secret.")
                 }
             }
             .navigationTitle("Settings")
@@ -66,18 +72,37 @@ struct SettingsView: View {
         }
         .onAppear {
             baseURL = store.config.baseURL
-            hostHeader = store.config.hostHeader
             secret = store.config.secret
         }
     }
 
     private func save() {
-        store.updateConfig(
-            ServerConfig(
-                baseURL: baseURL.trimmingCharacters(in: .whitespaces),
-                hostHeader: hostHeader.trimmingCharacters(in: .whitespaces),
-                secret: secret
-            )
+        store.updateConfig(currentConfig())
+    }
+
+    private func currentConfig() -> ServerConfig {
+        ServerConfig(
+            baseURL: baseURL.trimmingCharacters(in: .whitespaces),
+            secret: secret
         )
+    }
+
+    /// Three states, not two: a refused credential proved the network path
+    /// works, so it must not wear the same red X as a host that never answered.
+    private func icon(for outcome: ProbeOutcome) -> String {
+        if outcome.isFullyWorking { return "checkmark.circle" }
+        return outcome.isReachable ? "exclamationmark.triangle" : "xmark.circle"
+    }
+
+    private func tint(for outcome: ProbeOutcome) -> Color {
+        if outcome.isFullyWorking { return .green }
+        return outcome.isReachable ? .orange : .red
+    }
+
+    private func probe() async {
+        testing = true
+        defer { testing = false }
+        save()
+        outcome = await ConnectionProbe(config: currentConfig()).run()
     }
 }
