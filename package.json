@@ -35,7 +35,7 @@
   },
   "dependencies": {
     "@barry-rocks/bags": "link:../../barry/packages/bags",
-    "@barry-rocks/tools": "link:../../barry/packages/tools",
+    "@barry-rocks/sdk-bags": "link:../../barry/sdk/bags",
     "better-sqlite3": "12.10.0",
     "zod": "3.25.76"
   }
