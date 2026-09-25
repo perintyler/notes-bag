@@ -1,4 +1,4 @@
-import { findBagResourceUrl } from "@barry-rocks/bags";
+import { findBagResourceUrl } from "@barry-rocks/sdk/host";
 
 const DEFAULT_PORT = 3870;
 

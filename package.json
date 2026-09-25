@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "private": true,
   "type": "module",
-  "description": "Notes — a local SQLite store with a service, web app, iOS app and MCP tools, plus a Cloudflare scratchpad worker",
+  "description": "Notes \u2014 a local SQLite store with a service, web app, iOS app and MCP tools, plus a Cloudflare scratchpad worker",
   "main": "./src/index.js",
   "exports": {
     ".": "./src/index.js",
@@ -34,8 +34,7 @@
     "wrangler": "4.113.0"
   },
   "dependencies": {
-    "@barry-rocks/bags": "link:../../barry/packages/bags",
-    "@barry-rocks/sdk-bags": "link:../../barry/sdk/bags",
+    "@barry-rocks/sdk": "link:../../barry/sdk/lib",
     "better-sqlite3": "12.10.0",
     "zod": "3.25.76"
   }

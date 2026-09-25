@@ -1,4 +1,4 @@
-import { defineTool } from "@barry-rocks/sdk-bags";
+import { defineTool } from "@barry-rocks/sdk/bags";
 import { z } from "zod";
 import { api } from "./client.js";
 import type { Note, NoteSummary } from "./store.js";
