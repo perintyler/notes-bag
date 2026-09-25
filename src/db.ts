@@ -1,7 +1,7 @@
 import { mkdirSync } from "node:fs";
-import { homedir } from "node:os";
 import { dirname, join } from "node:path";
 import Database from "better-sqlite3";
+import { barryHome } from "@barry-rocks/sdk/services/home";
 
 export type NotesDb = Database.Database;
 
@@ -10,7 +10,7 @@ let _db: NotesDb | null = null;
 export function getDbPath(): string {
   return (
     process.env.BARRY_NOTES_DB ??
-    join(process.env.BARRY_HOME ?? join(homedir(), ".barry"), "notes.db")
+    join(barryHome(), "notes.db")
   );
 }
 
