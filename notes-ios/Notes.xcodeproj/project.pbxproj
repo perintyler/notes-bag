@@ -18,6 +18,7 @@
 		93B3D2DD6350018B5D547CC4 /* NoteEditorView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C47346BB38E9D6F133F852FF /* NoteEditorView.swift */; };
 		A7B9050EB03539CDA2C53D28 /* Models.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A19E75ED31BFFCF1A124509 /* Models.swift */; };
 		AAD971BE83B351BA9539B3CA /* NotesApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 68A686AF8B0C3D3110A21642 /* NotesApp.swift */; };
+		C4612A48E901F3EFE4EEEF79 /* BarryLocal in Frameworks */ = {isa = PBXBuildFile; productRef = EC04D5A146A3F2F8B6024DBA /* BarryLocal */; };
 		E610B4FF000455AE66B2CF62 /* Theme.swift in Sources */ = {isa = PBXBuildFile; fileRef = 62BB800F99742F25933D4747 /* Theme.swift */; };
 		EA15CD97CFF5C76D3A9D68E2 /* ServerConfig.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8FE1484562BEDE212E2D2BB9 /* ServerConfig.swift */; };
 		FBA366D51AB939404940A457 /* RootView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5FAC9916EE97CC6C8AD50FDE /* RootView.swift */; };
@@ -48,10 +49,22 @@
 		95BDF0B6716E64DA4DBBB863 /* ConnectionProbe.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConnectionProbe.swift; sourceTree = "<group>"; };
 		97A1759506DCBBA17EBEE665 /* BaseURLResolutionTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BaseURLResolutionTests.swift; sourceTree = "<group>"; };
 		997F60F87BBD76FE898D5AE5 /* ConnectionProbeTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConnectionProbeTests.swift; sourceTree = "<group>"; };
+		9B354041A413FFFF905FE3B3 /* BarryKit */ = {isa = PBXFileReference; lastKnownFileType = folder; name = BarryKit; path = ../../BarryKit; sourceTree = SOURCE_ROOT; };
 		BCA6C82149485B5E37FD0645 /* AppStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppStore.swift; sourceTree = "<group>"; };
 		C47346BB38E9D6F133F852FF /* NoteEditorView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NoteEditorView.swift; sourceTree = "<group>"; };
 		C4906C17E7FBE27F6AAA4755 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 /* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		81ACE718C59D44CF2150B501 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				C4612A48E901F3EFE4EEEF79 /* BarryLocal in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
 		13077E4469512C27FD1E113C /* App */ = {
@@ -85,9 +98,18 @@
 			isa = PBXGroup;
 			children = (
 				13077E4469512C27FD1E113C /* App */,
+				4138EF2163B5F3874BE77F71 /* Packages */,
 				C4E264411C8C0061C92CF1BD /* Tests */,
 				D126E93300653EB6B5CC3A59 /* Products */,
 			);
+			sourceTree = "<group>";
+		};
+		4138EF2163B5F3874BE77F71 /* Packages */ = {
+			isa = PBXGroup;
+			children = (
+				9B354041A413FFFF905FE3B3 /* BarryKit */,
+			);
+			name = Packages;
 			sourceTree = "<group>";
 		};
 		C4E264411C8C0061C92CF1BD /* Tests */ = {
@@ -118,6 +140,7 @@
 			buildPhases = (
 				924DCCBA2CADA9D7B5186E15 /* Sources */,
 				A7D40C83E0D6CCEA258090C5 /* Resources */,
+				81ACE718C59D44CF2150B501 /* Frameworks */,
 			);
 			buildRules = (
 			);
@@ -125,6 +148,7 @@
 			);
 			name = Notes;
 			packageProductDependencies = (
+				EC04D5A146A3F2F8B6024DBA /* BarryLocal */,
 			);
 			productName = Notes;
 			productReference = 5860355D0A9FDA2668CC57E4 /* Notes.app */;
@@ -168,6 +192,9 @@
 			);
 			mainGroup = 1F568819BC420B2747FB16CC;
 			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				EB3C5BEF473B3B32D506905F /* XCLocalSwiftPackageReference "../../BarryKit" */,
+			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = D126E93300653EB6B5CC3A59 /* Products */;
 			projectDirPath = "";
@@ -449,6 +476,20 @@
 			defaultConfigurationName = Debug;
 		};
 /* End XCConfigurationList section */
+
+/* Begin XCLocalSwiftPackageReference section */
+		EB3C5BEF473B3B32D506905F /* XCLocalSwiftPackageReference "../../BarryKit" */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = ../../BarryKit;
+		};
+/* End XCLocalSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		EC04D5A146A3F2F8B6024DBA /* BarryLocal */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = BarryLocal;
+		};
+/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = B0F2AFDF7927E9C5FB5AD009 /* Project object */;
 }
