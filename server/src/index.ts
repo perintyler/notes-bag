@@ -13,6 +13,7 @@
  * reader assume otherwise.
  */
 
+import { listenOnAssignedPort } from "@barry-rocks/sdk/services/listen";
 import { createServer, type IncomingMessage, type ServerResponse } from "node:http";
 import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
@@ -28,7 +29,6 @@ import {
 const HERE = dirname(fileURLToPath(import.meta.url));
 const WEB = join(HERE, "..", "..", "web");
 
-const PORT = Number(process.env.PORT || 3870);
 const SECRET = process.env.BARRY_SECRET ?? "";
 
 /**
@@ -53,7 +53,7 @@ function json(res: ServerResponse, body: unknown, status = 200): void {
 }
 
 function authorized(req: IncomingMessage): boolean {
-  if (!SECRET) return true;
+  if (!SECRET) return false;
   const header = req.headers.authorization;
   const alt = req.headers["x-barry-secret"];
   return header === `Bearer ${SECRET}` || alt === SECRET;
@@ -151,7 +151,6 @@ export const server = createServer(async (req, res) => {
 });
 
 if (process.argv[1] && import.meta.url === `file://${process.argv[1]}`) {
-  server.listen(PORT, "127.0.0.1", () => {
-    console.log(`notes service on 127.0.0.1:${PORT}`);
-  });
+  const listening = await listenOnAssignedPort(server);
+  console.log(`notes service on ${JSON.stringify(listening.address())}`);
 }

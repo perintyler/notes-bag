@@ -1,7 +1,8 @@
+import { migrateStore } from "@barry-rocks/sdk/stores/migrate";
 import { mkdirSync } from "node:fs";
 import { dirname, join } from "node:path";
 import Database from "better-sqlite3";
-import { barryHome } from "@barry-rocks/sdk/services/home";
+import { bagDataDir } from "@barry-rocks/sdk/services/home";
 
 export type NotesDb = Database.Database;
 
@@ -10,7 +11,7 @@ let _db: NotesDb | null = null;
 export function getDbPath(): string {
   return (
     process.env.BARRY_NOTES_DB ??
-    join(barryHome(), "notes.db")
+    join(bagDataDir("notes"), "notes.db")
   );
 }
 
@@ -40,37 +41,7 @@ const MIGRATIONS: Array<{ name: string; sql: string }> = [
 ];
 
 function migrate(db: NotesDb): void {
-  db.exec(`
-    CREATE TABLE IF NOT EXISTS schema_migrations (
-      version    INTEGER PRIMARY KEY,
-      name       TEXT NOT NULL,
-      applied_at TEXT NOT NULL DEFAULT (datetime('now'))
-    );
-  `);
-
-  const row = db
-    .prepare("SELECT coalesce(max(version), 0) AS version FROM schema_migrations")
-    .get() as { version: number };
-
-  if (row.version > MIGRATIONS.length) {
-    throw new Error(
-      `notes.db is at schema version ${row.version}, but this build only knows ` +
-        `${MIGRATIONS.length}. Update barry before using this database.`,
-    );
-  }
-
-  for (let v = row.version; v < MIGRATIONS.length; v++) {
-    const m = MIGRATIONS[v]!;
-    const apply = db.transaction(() => {
-      db.exec(m.sql);
-      db.prepare("INSERT INTO schema_migrations (version, name) VALUES (?, ?)").run(
-        v + 1,
-        m.name,
-      );
-      db.pragma(`user_version = ${v + 1}`);
-    });
-    apply();
-  }
+  migrateStore(db, MIGRATIONS, "notes.db");
 }
 
 export function getDb(path = getDbPath()): NotesDb {
