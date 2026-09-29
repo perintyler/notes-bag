@@ -36,24 +36,8 @@ services:
     command: pnpm
     args: ["exec", "tsx", "server/src/index.ts"]
     working-directory: .
-    port: 3870
-    # Reachable from the user's own devices over their tailnet. Intent only:
-    # the serve port, hostname and tailnet live in ~/.barry/tailnet.yaml,
-    # because they describe this installation rather than this bag.
-    tailnet: true
+    serves: http
     health: /health
-    # Reachable from a phone. The listener stays bound to loopback; Caddy
-    # terminates on the tailnet and proxies here. A raw service port is NOT
-    # reachable from a phone — bags/point-guard-ios points at one and its
-    # device path has never worked.
-    #
-    # No `tunnel:` block. Notes are the most personal thing in this bag and
-    # nothing here needs to be reachable off the tailnet; adding a public
-    # hostname would put a read/write store behind nothing but a Cloudflare
-    # Access policy. The tailnet is the boundary.
-    host: notes.barry.lan
-    run-at-load: true
-    keep-alive: true
     env:
       # The service is the only writer the app and the web page can reach, so
       # it must come up with the same secret they send. Listed here means

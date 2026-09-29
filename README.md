@@ -4,7 +4,7 @@ Two stores under one name. **They do not sync.**
 
 | | What | Where |
 |---|---|---|
-| **Local notes** | Many notes, each with a title and body. What the MCP tools, the web app and the iOS app read and write. | SQLite on this Mac, `~/.barry/notes.db`, served by `server/` on :3870 |
+| **Local notes** | Many notes, each with a title and body. What the MCP tools, the web app and the iOS app read and write. | SQLite on this Mac, `notes.db` in the bag's data directory, served by `server/` on the port `barry up` assigns |
 | **Scratchpad worker** | ONE note per namespace, no auth, no public hostname. | A Cloudflare Durable Object, `src/worker/` |
 
 Nothing reconciles them: a note written on the phone does not appear in the
@@ -16,7 +16,7 @@ work nobody has done.
 
 ```sh
 pnpm install
-pnpm start          # http://127.0.0.1:3870
+PORT=3870 BARRY_SECRET=dev pnpm start   # by hand; `barry up` assigns the port itself
 pnpm test           # store, service, and the worker's own tests
 pnpm typecheck      # two programs: the worker's and the service's
 ```
@@ -48,11 +48,9 @@ barry ios build notes --simulator "iPhone 16 Pro"
 barry ios build notes --device
 ```
 
-Simulator talks to `127.0.0.1:3870` with no secret. A device goes over
-Tailscale to Caddy, which selects the `notes.barry.lan` vhost from the `Host`
-header — a raw service port is not reachable from a phone. There is
-deliberately **no** `notes.barry.rocks`: notes are the most personal thing here
-and the tailnet is the boundary.
+A device reaches the service through whatever your installation's
+`hosting.yaml` exposes it on. Notes are the most personal thing here: keep them
+on a private tunnel, never a public one (`barry hosting status notes.api`).
 
 ## The scratchpad worker
 

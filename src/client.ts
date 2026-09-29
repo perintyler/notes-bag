@@ -1,25 +1,11 @@
 import { bagServiceUrl } from "@barry-rocks/sdk/host";
 
-const DEFAULT_PORT = 3870;
-
-/**
- * Where the tools reach the service.
- *
- * Read from the bag resource registry rather than a central port table, so the
- * port stays declared in this bag's manifest and core needs no entry for it.
- */
+/** Where the tools reach the service: this instance's registry, at call time. */
 function baseUrl(): string {
-  return bagServiceUrl("notes", "api", {
-    override: process.env.NOTES_SERVICE_URL,
-    fallback: `http://127.0.0.1:${DEFAULT_PORT}`,
-  });
+  return bagServiceUrl("notes", "api");
 }
 
-/**
- * The tools run on the same Mac as the service, so they reach it on loopback
- * where it takes no auth. The secret is still sent when one is bound, so a
- * service started WITH a secret does not reject its own bag's tools.
- */
+/** The service takes the instance secret on every request, loopback included. */
 function authHeaders(): Record<string, string> {
   const secret = process.env.BARRY_SECRET;
   return secret ? { authorization: `Bearer ${secret}` } : {};
@@ -37,8 +23,8 @@ export async function api<T>(path: string, init?: RequestInit): Promise<T> {
     // Name the service and the likely fix: "fetch failed" on its own has sent
     // people looking for a bug in the tool rather than a stopped service.
     throw new Error(
-      `notes service unreachable at ${baseUrl()} — is the com.barry.bag.notes.api ` +
-        `service running? (${err instanceof Error ? err.message : String(err)})`,
+      `notes service unreachable at ${baseUrl()} — is it running? \`barry service status notes.api\` ` +
+        `(${err instanceof Error ? err.message : String(err)})`,
     );
   }
   if (!response.ok) {
